@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Celular</title>
+    <!-- Importamos Firebase v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght=700&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            font-family: 'Courier Prime', 'Courier', monospace;
+        }
+
+        body {
+            margin: 0;
+            background-color: #121212;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        #vista-control {
+            width: 100%;
+            max-width: 480px;
+            background: #121212;
+            padding: 10px;
+        }
+
+        .control-titulo {
+            text-align: center;
+            color: #ff9900;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .seccion-control-caja {
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #2a2a2a;
+            margin-bottom: 15px;
+        }
+
+        .subtitulo-control {
+            color: #ff9900;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #2a2a2a;
+            padding-bottom: 4px;
+        }
+
+        .input-texto {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #222;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 5px;
+            font-size: 0.95rem;
+        }
+
+        .flex-equipos {
+            display: flex;
+            gap: 10px;
+        }
+
+        .col-eq-ctrl {
+            flex: 1;
+            background: #222;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .preview-escudo-ctrl {
+            width: 45px;
+            height: 45px;
+            margin: 0 auto 8px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #111;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .preview-escudo-ctrl img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+
+        .boton-accion {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-gol { background-color: #00ff66; color: #000; }
+        .btn-tarjeta { background-color: #ffcc00; color: #000; }
+        .btn-roja { background-color: #ff0033; color: #fff; }
+        .btn-normal { background-color: #333; color: #fff; }
+        .btn-naranja { background-color: #ff9900; color: #000; }
+
+        .lista-control-items {
+            max-height: 180px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .item-control-fila {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #222;
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .item-control-fila button {
+            background: #ff3333;
+            color: white;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="vista-control">
+        <div class="control-titulo">🎛️ PANEL DE CONTROL</div>
+
+        <!-- CONTROL DE TEXTO LED -->
+        <div class="seccion-control-caja">
+            <div class="subtitulo-control">✍️ Escribir en Pantalla LED</div>
+            <input type="text" id="ctrl-texto-consola" class="input-texto" placeholder="Escribe mensaje para el cartel LED...">
+            <button class="boton-accion btn-naranja" onclick="enviarMensajePersonalizado()">Actualizar Pantalla LED</button>
+        </div>
+
+        <!-- CONTROL DE PARTIDO EN CURSO -->
+        <div class="seccion-control-caja">
+            <div class="subtitulo-control">⚽ Partido en Curso</div>
+            
+            <input type="text" id="ctrl-nombre-local" class="input-texto" value="LOCAL" placeholder="Nombre Local" onchange="actualizarNombres()">
+            <input type="text" id="ctrl-nombre-visita" class="input-texto" value="VISITA" placeholder="Nombre Visitante" onchange="actualizarNombres()">
+
+            <div class="flex-equipos">
+                <!-- LOCAL -->
+                <div class="col-eq-ctrl">
+                    <div class="preview-escudo-ctrl">
+                        <img id="prev-escudo-local" src="" style="display:none;">
+                    </div>
+                    <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">LOCAL</div>
+                    <input type="text" id="jugador-local" class="input-texto" placeholder="Jugador" style="padding: 6px; font-size: 0.8rem;">
+                    <button class="boton-accion btn-gol" onclick="hacerGol('local')">⚽ GOL</button>
+                    <button class="boton-accion btn-tarjeta" onclick="ponerTarjeta('local', 'amarilla')">🟨 Tarjeta</button>
+                    <button class="boton-accion btn-roja" onclick="ponerTarjeta('local', 'roja')">🟥 Tarjeta</button>
+                    <button class="boton-accion btn-normal" onclick="restarGol('golesA')" style="padding: 5px; font-size: 0.8rem;">-1 Gol</button>
+                </div>
+                
+                <!-- VISITANTE -->
+                <div class="col-eq-ctrl">
+                    <div class="preview-escudo-ctrl">
+                        <img id="prev-escudo-visita" src="" style="display:none;">
+                    </div>
+                    <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">VISITA</div>
+                    <input type="text" id="jugador-visita" class="input-texto" placeholder="Jugador" style="padding: 6px; font-size: 0.8rem;">
+                    <button class="boton-accion btn-gol" onclick="hacerGol('visita')">⚽ GOL</button>
+                    <button class="boton-accion btn-tarjeta" onclick="ponerTarjeta('visita', 'amarilla')">🟨 Tarjeta</button>
+                    <button class="boton-accion btn-roja" onclick="ponerTarjeta('visita', 'roja')">🟥 Tarjeta</button>
+                    <button class="boton-accion btn-normal" onclick="restarGol('golesB')" style="padding: 5px; font-size: 0.8rem;">-1 Gol</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 10px; border-radius: 5px;">
+                <span style="font-size: 0.85rem;">🔴 SEÑAL "EN VIVO"</span>
+                <input type="checkbox" id="toggle-envivo" onchange="cambiarEnVivo(this.checked)" style="transform: scale(1.5); cursor: pointer;">
+            </div>
+
+            <button class="boton-accion btn-naranja" onclick="finalizarPartido()" style="margin-top: 15px;">🏁 Terminar y Guardar</button>
+        </div>
+
+        <!-- PROGRAMAR PARTIDOS -->
+        <div class="seccion-control-caja">
+            <div class="subtitulo-control">📅 Programar Próximos Partidos</div>
+            <input type="text" id="prog-local" class="input-texto" placeholder="Equipo Local">
+            <input type="text" id="prog-visita" class="input-texto" placeholder="Equipo Visitante">
+            
+            <label style="font-size: 0.8rem; color: #ff9900; display: block; margin-bottom: 4px;">Seleccionar Fecha y Hora del Encuentro:</label>
+            <input type="datetime-local" id="prog-fecha" class="input-texto">
+            
+            <button class="boton-accion btn-gol" onclick="agregarProximoPartido()">Programar Partido</button>
+            
+            <div class="lista-control-items" id="ctrl-lista-proximos"></div>
+        </div>
+    </div>
+
+    <!-- Script del Motor de Escudos -->
+    <script src="escudos.js"></script>
+
+    <script>
+        // === CONFIGURACIÓN DE TU FIREBASE INTEGRADA ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyAz_mMX5qGD5DRjxBdD9OvD9v9SvNi5mcM",
+            authDomain: "marcoadro-de-ffutbol.firebaseapp.com",
+            databaseURL: "https://marcoadro-de-ffutbol-default-rtdb.firebaseio.com",
+            projectId: "marcoadro-de-ffutbol",
+            storageBucket: "marcoadro-de-ffutbol.firebasestorage.app",
+            messagingSenderId: "243577100993",
+            appId: "1:243577100993:web:c967e07785350e5dc49240"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const refMarcador = db.ref('marcador_v3_datos');
+        const refHistorial = db.ref('marcador_v3_historial');
+        const refProximos = db.ref('marcador_v3_proximos');
+
+        let estado = {};
+
+        refMarcador.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                estado = data;
+                document.getElementById('ctrl-nombre-local').value = data.nombreA || "LOCAL";
+                document.getElementById('ctrl-nombre-visita').value = data.nombreB || "VISITA";
+                document.getElementById('toggle-envivo').checked = data.enVivo || false;
+
+                // Cargar vista previa de escudos en control
+                cargarEscudoHTML(data.nombreA, 'prev-escudo-local');
+                cargarEscudoHTML(data.nombreB, 'prev-escudo-visita');
+            }
+        });
+
+        refProximos.on('value', (snapshot) => {
+            const data = snapshot.val();
+            const contenedorControl = document.getElementById('ctrl-lista-proximos');
+            contenedorControl.innerHTML = "";
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    const p = data[key];
+                    contenedorControl.innerHTML += `
+                        <div class="item-control-fila">
+                            <span>${p.local} vs ${p.visita}</span>
+                            <div style="display: flex; gap: 5px;">
+                                <button onclick="ponerPartidoProgramadoEnVivo('${p.local}', '${p.visita}')" style="background-color: #00ff66; color: black; font-weight: bold; font-size: 0.75rem;">✔ Jugar</button>
+                                <button onclick="eliminarProximo('${key}')">❌</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        });
+
+        function enviarMensajePersonalizado() {
+            const input = document.getElementById('ctrl-texto-consola');
+            const texto = input.value.trim().toUpperCase();
+            if (texto !== "") {
+                refMarcador.update({ ultimoEvento: texto });
+                input.value = "";
+            }
+        }
+
+        function actualizarNombres() {
+            refMarcador.update({
+                nombreA: document.getElementById('ctrl-nombre-local').value.toUpperCase(),
+                nombreB: document.getElementById('ctrl-nombre-visita').value.toUpperCase()
+            });
+        }
+
+        function cambiarEnVivo(valor) {
+            refMarcador.update({ enVivo: valor });
+            if (valor) {
+                refMarcador.update({ ultimoEvento: "🔥 ¡EL PARTIDO HA EMPEZADO!" });
+            }
+        }
+
+        function hacerGol(equipo) {
+            const esLocal = equipo === 'local';
+            const inputJugador = document.getElementById(esLocal ? 'jugador-local' : 'jugador-visita');
+            const placeholderNombre = inputJugador.value.trim().toUpperCase();
+            
+            let nuevoGol = esLocal ? (estado.golesA + 1) : (estado.golesB + 1);
+            let textoGol = placeholderNombre 
+                ? `⚽ ¡GOL DE ${esLocal ? estado.nombreA : estado.nombreB}! (${placeholderNombre})`
+                : `⚽ ¡GOL DE ${esLocal ? estado.nombreA : estado.nombreB}!`;
+
+            refMarcador.update({
+                [esLocal ? 'golesA' : 'golesB']: nuevoGol,
+                ultimoEvento: textoGol
+            });
+            inputJugador.value = "";
+        }
+
+        function restarGol(campo) {
+            let actual = estado[campo] || 0;
+            if (actual > 0) {
+                refMarcador.update({
+                    [campo]: actual - 1,
+                    ultimoEvento: "ANULACIÓN DE GOL"
+                });
+            }
+        }
+
+        function ponerTarjeta(equipo, color) {
+            const esLocal = equipo === 'local';
+            const inputJugador = document.getElementById(esLocal ? 'jugador-local' : 'jugador-visita');
+            const nombreJugador = inputJugador.value.trim().toUpperCase();
+            
+            const emoji = color === 'roja' ? '🟥' : '🟨';
+            let detalleJugador = nombreJugador ? `A ${nombreJugador}` : `PARA ${esLocal ? estado.nombreA : estado.nombreB}`;
+            refMarcador.update({ ultimoEvento: `${emoji} TARJETA ${color.toUpperCase()} ${detalleJugador}` });
+            inputJugador.value = "";
+        }
+
+        function finalizarPartido() {
+            if (confirm("¿Finalizar y archivar partido en curso?")) {
+                const ahora = new Date();
+                const hora = ahora.getHours().toString().padStart(2, '0') + ':' + ahora.getMinutes().toString().padStart(2, '0');
+
+                refHistorial.push({
+                    nombreA: estado.nombreA,
+                    nombreB: estado.nombreB,
+                    golesA: estado.golesA,
+                    golesB: estado.golesB,
+                    hora: hora
+                });
+
+                refMarcador.update({
+                    golesA: 0,
+                    golesB: 0,
+                    enVivo: false,
+                    ultimoEvento: "FIN DEL PARTIDO ANTERIOR"
+                });
+                alert("¡Partido guardado!");
+            }
+        }
+
+        function agregarProximoPartido() {
+            const local = document.getElementById('prog-local').value.trim().toUpperCase();
+            const visita = document.getElementById('prog-visita').value.trim().toUpperCase();
+            const fechaInput = document.getElementById('prog-fecha').value;
+
+            if (local !== "" && visita !== "" && fechaInput !== "") {
+                const fechaDate = new Date(fechaInput);
+                
+                // Formateamos la fecha para que se vea linda en pantalla: "Lunes 24/02 - 18:30hs"
+                const opciones = { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' };
+                let fechaFormateada = fechaDate.toLocaleDateString('es-AR', opciones) + "HS";
+                fechaFormateada = fechaFormateada.toUpperCase();
+
+                refProximos.push({ 
+                    local: local, 
+                    visita: visita, 
+                    fecha: fechaFormateada,
+                    fechaISO: fechaInput // Guardamos la versión ISO para que JS calcule la cuenta regresiva sin problemas
+                });
+
+                document.getElementById('prog-local').value = "";
+                document.getElementById('prog-visita').value = "";
+                document.getElementById('prog-fecha').value = "";
+            } else {
+                alert("Por favor completá los nombres de los equipos y seleccioná una fecha en el calendario.");
+            }
+        }
+
+        function eliminarProximo(id) {
+            if (confirm("¿Eliminar este partido programado?")) {
+                refProximos.child(id).remove();
+            }
+        }
+
+        function ponerPartidoProgramadoEnVivo(local, visita) {
+            if (confirm(`¿Poner en juego a ${local} vs ${visita}?`)) {
+                refMarcador.update({
+                    nombreA: local,
+                    nombreB: visita,
+                    golesA: 0,
+                    golesB: 0,
+                    enVivo: true,
+                    ultimoEvento: `🔥 ¡COMENZÓ: ${local} VS ${visita}!`
+                });
+            }
+        }
+    </script>
+</body>
+</html>
